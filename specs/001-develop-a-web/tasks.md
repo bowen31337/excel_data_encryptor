@@ -82,16 +82,16 @@
 
 - [ ] **T035** [P] Write tests/unit/FileUploader.test.tsx - test file selection, drag-and-drop, file type rejection, size validation using React Testing Library
 - [ ] **T036** [P] Write tests/unit/EncryptButton.test.tsx - test button states (enabled/disabled), click handler, loading indicator
-- [ ] **T037** [P] Write tests/integration/fileProcessing.test.tsx - test complete flow: upload → parse → encrypt → download with mock files
+- [x] **T037** [P] Write tests/integration/fileProcessing.test.tsx - test complete flow: upload → parse → encrypt → download with mock files (7 integration tests)
 
 ---
 
 ## Phase 3.7: Integration Tests (Based on Quickstart Scenarios)
 
-- [ ] **T038** [P] Create test-data/employees-exact.xlsx test fixture (2 rows, exact column names: First Name, Last Name, Email, Mobile, Department)
-- [ ] **T039** [P] Create test-data/contacts-fuzzy.csv test fixture (3 rows, fuzzy names: FirstName, Last_Name, Email Address, Mobile Number)
-- [ ] **T040** [P] Create test-data/incomplete-data.xlsx test fixture (3 rows with empty cells in target columns)
-- [ ] **T041** [P] Create test-data/no-targets.csv test fixture (no target columns: ID, Product, Price, Quantity)
+- [x] **T038** [P] Create test-data/employees-exact.xlsx test fixture (2 rows, exact column names: First Name, Last Name, Email, Mobile, Department)
+- [x] **T039** [P] Create test-data/contacts-fuzzy.csv test fixture (3 rows, fuzzy names: FirstName, Last_Name, Email Address, Mobile Number)
+- [x] **T040** [P] Create test-data/incomplete-data.xlsx test fixture (3 rows with empty cells in target columns)
+- [x] **T041** [P] Create test-data/no-targets.csv test fixture (no target columns: ID, Product, Price, Quantity)
 - [ ] **T042** Write tests/integration/userFlow.test.tsx - test Scenario 1 (exact column names) end-to-end with employees-exact.xlsx
 - [ ] **T043** Write tests/integration/fuzzyMatching.test.tsx - test Scenario 2 (fuzzy column matching) with contacts-fuzzy.csv
 - [ ] **T044** Write tests/integration/emptyCells.test.tsx - test Scenario 3 (empty cells remain empty) with incomplete-data.xlsx
@@ -123,7 +123,7 @@
 
 ## Phase 3.10: Styling & UI Polish
 
-- [ ] **T058** Configure Ant Design theme in src/main.tsx - blue primary color (#1890ff), customize theme per design mockup
+- [x] **T058** Configure Ant Design theme in src/main.tsx - blue primary color (#1890ff), customize theme per design mockup
 - [ ] **T059** Add public/assets/lock-icon.svg - create or source lock icon for header branding
 - [ ] **T060** Implement responsive layout in src/components/Layout.tsx - desktop (≥992px), tablet (768-991px), mobile (<768px) breakpoints
 - [ ] **T061** Add error messages mapping in src/utils/errorMessages.ts - all error scenarios from quickstart.md with actionable messages
@@ -242,8 +242,8 @@ npm run task T046 & npm run task T047 & npm run task T048 & npm run task T049
 
 ## Task Completion Checklist
 
-- [x] Core tasks completed (44/71 - 62%)
-- [x] All unit tests passing (78/78 tests ✅)
+- [x] Core tasks completed (49/71 - 69%)
+- [x] All unit tests passing (85/85 tests ✅ - includes 7 integration tests)
 - [ ] Test coverage ≥80% overall (unit tests complete, integration/E2E pending)
 - [x] Performance benchmarks met (<500ms/MB - unit tests validate)
 - [ ] Biome linting passes (minor tsconfig issues remain)
