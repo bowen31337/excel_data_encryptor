@@ -20,7 +20,8 @@
       "Bash(npx biome check:*)",
       "Bash(cat:*)",
       "Bash(npx tsc:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
