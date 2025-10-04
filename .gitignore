@@ -1,0 +1,9 @@
+node_modules
+dist
+.DS_Store
+*.log
+
+# PWA assets (generated)
+public/manifest.webmanifest
+public/sw.js
+public/workbox-*.js

@@ -2,7 +2,24 @@
   "permissions": {
     "allow": [
       "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
-      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)"
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+      "Bash(git checkout:*)",
+      "Bash(.specify/scripts/bash/update-agent-context.sh:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint:*)",
+      "Bash(chmod:*)",
+      "Bash(npm run build:single:*)",
+      "Bash(./build-check.sh)",
+      "Bash(node:*)",
+      "Bash(timeout 10 npm test -- encryptionService.test.ts --run)",
+      "Bash(echo:*)",
+      "Bash(npx biome check:*)",
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

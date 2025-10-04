@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/assets/lock-icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta name="description" content="Excel Data Encryptor - Encrypt sensitive data in Excel and CSV files using SHA-256 hashing, entirely in your browser." />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; manifest-src 'self';" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#1890ff" />
+    <title>Excel Data Encryptor</title>
+    <style>
+      :root {
+        --primary-color: #1890ff;
+        --primary-hover: #40a9ff;
+        --primary-active: #096dd9;
+
+        /* Mobile breakpoints */
+        --breakpoint-xs: 0px;
+        --breakpoint-sm: 576px;
+        --breakpoint-md: 768px;
+        --breakpoint-lg: 992px;
+        --breakpoint-xl: 1200px;
+
+        /* Touch target minimum size */
+        --touch-target-min: 44px;
+      }
+
+      /* Mobile-specific styles */
+      @media (max-width: 768px) {
+        /* Ensure touch targets meet minimum size (48px for better touch UX) */
+        button, .ant-btn {
+          min-height: 48px !important;
+        }
+
+        /* Larger font sizes for better readability on mobile */
+        body {
+          font-size: 16px;
+        }
+
+        /* Add spacing for better touch interaction */
+        .ant-space-item {
+          margin-bottom: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

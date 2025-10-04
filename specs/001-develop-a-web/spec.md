@@ -13,6 +13,7 @@
 - Q: How should the system handle Excel files with multiple sheets? → A: Process only the first sheet and ignore all others
 - Q: How should the system handle empty cells in target columns? → A: Skip encryption - leave empty cells empty, only hash non-empty values
 - Q: What is the maximum file size the system should support? → A: 100MB - large datasets (~1M rows)
+- Q: How should the downloaded encrypted file be named? → A: Timestamp suffix - "originalname_2025-10-02_encrypted.xlsx"
 
 ---
 
@@ -39,7 +40,7 @@ A user has a spreadsheet (Excel or CSV file) containing sensitive personal infor
 - What happens when an uploaded file doesn't contain one or more of the target columns (First Name, Last Name, Mobile, Email)?
 - System handles column name variations through fuzzy matching (normalizing spaces, underscores, dashes, case)
 - Empty cells in target columns remain empty (only non-empty values are hashed)
-- How does the system handle very large files (e.g., 100MB+)?
+- Maximum supported file size is 100MB (approximately 1M rows)
 - What happens if the user tries to upload an unsupported file format (e.g., .doc, .pdf)?
 - Excel files with multiple sheets: only the first sheet is processed, others are ignored
 - What happens if the user clicks "Encrypt & Download" without uploading a file first?
@@ -84,11 +85,11 @@ A user has a spreadsheet (Excel or CSV file) containing sensitive personal infor
 
 - **FR-017**: System MUST provide visual feedback during file processing [NEEDS CLARIFICATION: Should there be a progress bar, spinner, or percentage indicator?]
 
-- **FR-018**: System MUST name the downloaded file appropriately [NEEDS CLARIFICATION: Should it be "encrypted_[original-name]" or "[original-name]_encrypted" or user-configurable?]
+- **FR-018**: System MUST name the downloaded file using the pattern "[originalname]_[YYYY-MM-DD]_encrypted.[extension]" where the date is the processing date (e.g., "data_2025-10-02_encrypted.xlsx")
 
 ### Non-Functional Requirements
 
-- **NFR-001**: System MUST process files up to [NEEDS CLARIFICATION: maximum file size not specified - 10MB? 100MB? 1GB?] without crashing or freezing the browser
+- **NFR-001**: System MUST process files up to 100MB without crashing or freezing the browser
 
 - **NFR-002**: System MUST encrypt files at a rate of at least 500ms per MB as per constitution performance standards
 
@@ -123,9 +124,9 @@ A user has a spreadsheet (Excel or CSV file) containing sensitive personal infor
 - [x] All mandatory sections completed
 
 ### Requirement Completeness
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [ ] No [NEEDS CLARIFICATION] markers remain (5 resolved, 5 deferred to planning)
 - [x] Requirements are testable and unambiguous (with clarifications noted)
-- [ ] Success criteria are measurable (needs clarification on performance thresholds)
+- [x] Success criteria are measurable (100MB max file size, 500ms/MB processing)
 - [x] Scope is clearly bounded
 - [x] Dependencies and assumptions identified
 
@@ -139,7 +140,8 @@ A user has a spreadsheet (Excel or CSV file) containing sensitive personal infor
 - [x] User scenarios defined
 - [x] Requirements generated
 - [x] Entities identified
-- [ ] Review checklist passed (pending clarifications)
+- [x] Critical clarifications completed (5/5 questions answered)
+- [ ] Review checklist passed (5 low-priority clarifications deferred to planning)
 
 ---
 

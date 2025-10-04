@@ -1,0 +1,5 @@
+FirstName,LastName,Email,Mobile
+"  JOHN  ","  DOE  ","  JOHN.DOE@EXAMPLE.COM  ","  555-1234  "
+"JANE","SMITH","JANE@TEST.COM","555-5678"
+"alice","johnson","alice@example.com","555-9999"
+"   ","Bob","  ","555-0000"
