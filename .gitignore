@@ -7,6 +7,3 @@ dist
 public/manifest.webmanifest
 public/sw.js
 public/workbox-*.js
-
-# Performance test data (large files, generate locally)
-test-data/perf-*.csv

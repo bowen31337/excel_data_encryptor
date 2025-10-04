@@ -3,9 +3,8 @@
  * Tests encryption throughput with large datasets
  * Target: <1500ms per MB
  *
- * NOTE: Performance test data files are NOT committed to the repository.
- * Generate them locally with: node scripts/generate-large-datasets.js
- * These tests will be skipped in CI/CD environments.
+ * NOTE: Performance test data files are stored in Git LFS.
+ * If tests fail with "file not found", run: git lfs pull
  */
 
 import { describe, it, expect } from 'vitest';
@@ -16,21 +15,14 @@ import { findTargetColumns } from '../../src/services/columnMatcher';
 import { hashValue } from '../../src/services/encryptionService';
 import { generateCSV } from '../../src/services/fileGenerator';
 
-// Helper to check if performance test files exist
-const perfFilesExist = () => {
-  const files = ['perf-1mb.csv', 'perf-10mb.csv', 'perf-50mb.csv'];
-  return files.every(f => fs.existsSync(path.join(process.cwd(), 'test-data', f)));
-};
-
-const shouldSkip = !perfFilesExist();
-
-if (shouldSkip) {
-  console.warn('\n⚠️  Performance test data not found. Generate with: node scripts/generate-large-datasets.js\n');
-}
-
 describe('Performance Benchmarks', () => {
-  it.skipIf(shouldSkip)('should encrypt 1MB file in <2000ms', async () => {
+  it('should encrypt 1MB file in <2000ms', async () => {
     const testFilePath = path.join(process.cwd(), 'test-data', 'perf-1mb.csv');
+
+    if (!fs.existsSync(testFilePath)) {
+      throw new Error('Performance test file not found. Run: git lfs pull');
+    }
+
     const buffer = fs.readFileSync(testFilePath);
     const blob = new Blob([buffer], { type: 'text/csv' });
     const file = new File([blob], 'perf-1mb.csv', { type: 'text/csv' });
@@ -63,12 +55,17 @@ describe('Performance Benchmarks', () => {
 
     console.log(`  📊 1MB encryption: ${duration.toFixed(0)}ms`);
 
-    expect(duration).toBeLessThan(2000); // Relaxed target: <2000ms for 1MB
+    expect(duration).toBeLessThan(2000); // Target: <2000ms for 1MB
     expect(encryptedRows.length).toBe(parsedData.rows.length);
   }, 60000);
 
-  it.skipIf(shouldSkip)('should encrypt 10MB file in <15000ms', async () => {
+  it('should encrypt 10MB file in <15000ms', async () => {
     const testFilePath = path.join(process.cwd(), 'test-data', 'perf-10mb.csv');
+
+    if (!fs.existsSync(testFilePath)) {
+      throw new Error('Performance test file not found. Run: git lfs pull');
+    }
+
     const buffer = fs.readFileSync(testFilePath);
     const blob = new Blob([buffer], { type: 'text/csv' });
     const file = new File([blob], 'perf-10mb.csv', { type: 'text/csv' });
@@ -99,12 +96,17 @@ describe('Performance Benchmarks', () => {
 
     console.log(`  📊 10MB encryption: ${duration.toFixed(0)}ms (${(duration / 10).toFixed(0)}ms/MB)`);
 
-    expect(duration).toBeLessThan(15000); // Relaxed target: <1500ms/MB
+    expect(duration).toBeLessThan(15000); // Target: <1500ms/MB
     expect(encryptedRows.length).toBe(parsedData.rows.length);
   }, 120000);
 
-  it.skipIf(shouldSkip)('should handle 50MB file successfully', async () => {
+  it('should handle 50MB file successfully', async () => {
     const testFilePath = path.join(process.cwd(), 'test-data', 'perf-50mb.csv');
+
+    if (!fs.existsSync(testFilePath)) {
+      throw new Error('Performance test file not found. Run: git lfs pull');
+    }
+
     const buffer = fs.readFileSync(testFilePath);
     const blob = new Blob([buffer], { type: 'text/csv' });
     const file = new File([blob], 'perf-50mb.csv', { type: 'text/csv' });
@@ -137,7 +139,7 @@ describe('Performance Benchmarks', () => {
     expect(encryptedRows.length).toBe(1000);
   }, 120000);
 
-  it.skipIf(shouldSkip)('should measure throughput consistency', async () => {
+  it('should measure throughput consistency', async () => {
     const results: { size: string; throughput: number }[] = [];
 
     const files = [
@@ -147,6 +149,11 @@ describe('Performance Benchmarks', () => {
 
     for (const { path: filename, sizeMB } of files) {
       const testFilePath = path.join(process.cwd(), 'test-data', filename);
+
+      if (!fs.existsSync(testFilePath)) {
+        throw new Error(`Performance test file not found: ${filename}. Run: git lfs pull`);
+      }
+
       const buffer = fs.readFileSync(testFilePath);
       const blob = new Blob([buffer], { type: 'text/csv' });
       const file = new File([blob], filename, { type: 'text/csv' });
@@ -181,14 +188,4 @@ describe('Performance Benchmarks', () => {
     // Verify we got results
     expect(results.length).toBe(2);
   }, 120000);
-
-  // Always run this test - validates the skip logic works
-  it('should have performance test infrastructure ready', () => {
-    const scriptPath = path.join(process.cwd(), 'scripts', 'generate-large-datasets.js');
-    expect(fs.existsSync(scriptPath)).toBe(true);
-
-    if (!perfFilesExist()) {
-      console.log('  ℹ️  Run: node scripts/generate-large-datasets.js to generate test data');
-    }
-  });
 });
