@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(git lfs:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nAdd Git LFS for performance test data files\n\nChanges:\n- Configure Git LFS to track test-data/perf-*.csv (61MB total)\n- Add performance test files via LFS:\n  - perf-1mb.csv: 1MB (18,724 rows)\n  - perf-10mb.csv: 10MB (187,245 rows)\n  - perf-50mb.csv: 50MB (936,228 rows)\n- Remove .gitignore entry (files now in LFS, not ignored)\n- Update performance tests to expect files (no skip logic)\n- Tests will now run in CI/CD with LFS files\n\nGit LFS allows storing large files efficiently in the repository.\nCI/CD will automatically pull LFS files during checkout.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd Git LFS for performance test data files\n\nChanges:\n- Configure Git LFS to track test-data/perf-*.csv (61MB total)\n- Add performance test files via LFS:\n  - perf-1mb.csv: 1MB (18,724 rows)\n  - perf-10mb.csv: 10MB (187,245 rows)\n  - perf-50mb.csv: 50MB (936,228 rows)\n- Remove .gitignore entry (files now in LFS, not ignored)\n- Update performance tests to expect files (no skip logic)\n- Tests will now run in CI/CD with LFS files\n\nGit LFS allows storing large files efficiently in the repository.\nCI/CD will automatically pull LFS files during checkout.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
