@@ -3,12 +3,15 @@
  * Tests that empty cells in target columns remain empty (not encrypted)
  */
 
-import { describe, expect, it } from 'vitest';
-import { parseExcel } from '../../src/services/fileParser';
-import { findTargetColumns } from '../../src/services/columnMatcher';
-import { hashValue } from '../../src/services/encryptionService';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { findColumnsToEncrypt } from '../../src/services/columnMatcher';
+import { hashValue } from '../../src/services/encryptionService';
+import { parseExcel } from '../../src/services/fileParser';
+
+// Department is the only non-encrypted column in this fixture.
+const EXCLUDED = ['department'];
 
 describe('Integration Test - Scenario 3: Empty Cells Handling', () => {
   it('should keep empty cells empty (not encrypt them)', async () => {
@@ -16,10 +19,10 @@ describe('Integration Test - Scenario 3: Empty Cells Handling', () => {
     const testFilePath = path.join(process.cwd(), 'test-data', 'incomplete-data.xlsx');
     const buffer = fs.readFileSync(testFilePath);
     const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
     const file = new File([blob], 'incomplete-data.xlsx', {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
 
     // Step 1: Parse
@@ -27,7 +30,7 @@ describe('Integration Test - Scenario 3: Empty Cells Handling', () => {
     expect(parsedData.rows).toHaveLength(3);
 
     // Step 2: Detect columns
-    const columnMappings = findTargetColumns(parsedData.headers);
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, EXCLUDED);
 
     // Step 3: Encrypt (with empty cell handling)
     const encryptedRows = await Promise.all(

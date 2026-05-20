@@ -8,13 +8,13 @@
  * Thresholds are set for CI/CD environments (slower than local dev).
  */
 
-import { describe, it, expect } from 'vitest';
-import path from 'node:path';
 import fs from 'node:fs';
-import { parseCSV } from '../../src/services/fileParser';
-import { findTargetColumns } from '../../src/services/columnMatcher';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { findColumnsToEncrypt } from '../../src/services/columnMatcher';
 import { hashValue } from '../../src/services/encryptionService';
 import { generateCSV } from '../../src/services/fileGenerator';
+import { parseCSV } from '../../src/services/fileParser';
 
 describe('Performance Benchmarks', () => {
   it('should encrypt 1MB file in <2000ms', async () => {
@@ -32,7 +32,7 @@ describe('Performance Benchmarks', () => {
 
     // Full encryption pipeline
     const parsedData = await parseCSV(file);
-    const columnMappings = findTargetColumns(parsedData.headers);
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, []);
 
     // Encrypt rows
     const encryptedRows = await Promise.all(
@@ -74,7 +74,7 @@ describe('Performance Benchmarks', () => {
     const startTime = performance.now();
 
     const parsedData = await parseCSV(file);
-    const columnMappings = findTargetColumns(parsedData.headers);
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, []);
 
     const encryptedRows = await Promise.all(
       parsedData.rows.map(async (row) => {
@@ -95,7 +95,9 @@ describe('Performance Benchmarks', () => {
     const endTime = performance.now();
     const duration = endTime - startTime;
 
-    console.log(`  📊 10MB encryption: ${duration.toFixed(0)}ms (${(duration / 10).toFixed(0)}ms/MB)`);
+    console.log(
+      `  📊 10MB encryption: ${duration.toFixed(0)}ms (${(duration / 10).toFixed(0)}ms/MB)`
+    );
 
     expect(duration).toBeLessThan(30000); // CI/CD threshold: <30000ms for 10MB (~3000ms/MB)
     expect(encryptedRows.length).toBe(parsedData.rows.length);
@@ -115,7 +117,7 @@ describe('Performance Benchmarks', () => {
     const startTime = performance.now();
 
     const parsedData = await parseCSV(file);
-    const columnMappings = findTargetColumns(parsedData.headers);
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, []);
 
     // Only encrypt first 1000 rows for speed
     const encryptedRows = await Promise.all(
@@ -161,7 +163,7 @@ describe('Performance Benchmarks', () => {
 
       const startTime = performance.now();
       const parsedData = await parseCSV(file);
-      const columnMappings = findTargetColumns(parsedData.headers);
+      const columnMappings = findColumnsToEncrypt(parsedData.headers, []);
 
       // Sample encryption (first 500 rows)
       await Promise.all(

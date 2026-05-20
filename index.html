@@ -9,6 +9,13 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#1890ff" />
     <title>Excel Data Encryptor</title>
+    <script>
+      /* Edit this list to control which columns are NOT encrypted.
+         Matching is case- and whitespace-insensitive (e.g. "name" matches
+         "Name", "NAME ", "name_"). Leave empty (`[]`) or remove this script
+         to encrypt EVERY column in the uploaded file. */
+      window.excludingColumn = ['name', 'address'];
+    </script>
     <style>
       :root {
         --primary-color: #1890ff;

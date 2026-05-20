@@ -5,19 +5,10 @@
 
 import type { ParsedData, ProcessedFile } from './file.types';
 
-export enum TargetColumnType {
-  FirstName = 'FIRST_NAME',
-  LastName = 'LAST_NAME',
-  Mobile = 'MOBILE',
-  Email = 'EMAIL',
-  Phone = 'PHONE',
-}
-
 export interface ColumnMapping {
   originalName: string;
   normalizedName: string;
   isTarget: boolean;
-  targetType?: TargetColumnType;
   columnIndex: number;
 }
 

@@ -1,27 +1,28 @@
 /**
  * Column Matcher Service
- * Implements fuzzy matching for target columns (First Name, Last Name, Email, Mobile, Phone)
- * Based on contracts/encryption-service.contract.ts
+ *
+ * Determines which columns should be encrypted using an exclusion-list model:
+ * every column is hashed UNLESS its normalized name appears in `excludingColumn`.
+ *
+ * The exclusion list is sourced from `window.excludingColumn` (set in index.html)
+ * and can be edited in the built single-file HTML without rebuilding.
  */
 
-import { type ColumnMapping, TargetColumnType } from '../types/encryption.types';
+import type { ColumnMapping } from '../types/encryption.types';
+
+declare global {
+  interface Window {
+    excludingColumn?: unknown;
+  }
+}
 
 /**
- * Normalize a column name for fuzzy matching
- *
- * @param name - The column name to normalize
- * @returns Normalized column name (lowercase, no spaces/underscores/dashes)
+ * Normalize a column name for fuzzy matching.
+ * Lowercases and strips whitespace, underscores, and dashes.
  *
  * @example
- * ```typescript
- * normalizeColumnName("First Name")    // "firstname"
- * normalizeColumnName("First_Name")    // "firstname"
- * normalizeColumnName("first-name")    // "firstname"
- * normalizeColumnName("FIRST NAME")    // "firstname"
- * ```
- *
- * @remarks
- * Removes spaces, underscores, dashes and converts to lowercase for fuzzy matching
+ *   normalizeColumnName("First Name")  // "firstname"
+ *   normalizeColumnName("E-Mail ")     // "email"
  */
 export function normalizeColumnName(name: string): string {
   return name
@@ -31,74 +32,73 @@ export function normalizeColumnName(name: string): string {
 }
 
 /**
- * Find target columns in a list of headers using fuzzy matching
- *
- * @param headers - Array of column header names from the file
- * @returns Array of ColumnMapping objects with isTarget=true for matched columns
- *
- * @example
- * ```typescript
- * const headers = ["First Name", "Last_Name", "Email Address", "Phone Number"];
- * const mappings = findTargetColumns(headers);
- * // Returns:
- * // [
- * //   { originalName: "First Name", normalizedName: "firstname", isTarget: true, targetType: TargetColumnType.FirstName, columnIndex: 0 },
- * //   { originalName: "Last_Name", normalizedName: "lastname", isTarget: true, targetType: TargetColumnType.LastName, columnIndex: 1 },
- * //   { originalName: "Email Address", normalizedName: "emailaddress", isTarget: true, targetType: TargetColumnType.Email, columnIndex: 2 },
- * //   { originalName: "Phone Number", normalizedName: "phonenumber", isTarget: true, targetType: TargetColumnType.Phone, columnIndex: 3 }
- * // ]
- * ```
- *
- * @remarks
- * Supports fuzzy matching for variations of:
- * - First Name (firstname, fname, first_name, first-name)
- * - Last Name (lastname, lname, last_name, last-name)
- * - Email (email, emailaddress, e-mail)
- * - Mobile (mobile, mobilenumber, mobile_number)
- * - Phone (phone, phonenumber, phone_number)
+ * Read `window.excludingColumn` and coerce it to a sanitized string array.
+ * Falls back to `[]` if missing, not an array, or contains non-strings.
  */
-export function findTargetColumns(headers: string[]): ColumnMapping[] {
-  const targetPatterns: Record<string, TargetColumnType> = {
-    // First Name variations
-    firstname: TargetColumnType.FirstName,
-    fname: TargetColumnType.FirstName,
+export function readExcludingColumnFromWindow(): string[] {
+  if (typeof window === 'undefined') return [];
+  const raw = window.excludingColumn;
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) {
+    console.warn(
+      '[columnMatcher] window.excludingColumn is not an array — ignoring and encrypting all columns.'
+    );
+    return [];
+  }
+  return raw.filter((v): v is string => typeof v === 'string');
+}
 
-    // Last Name variations
-    lastname: TargetColumnType.LastName,
-    lname: TargetColumnType.LastName,
+function buildExcludedSet(excludingColumn: readonly string[]): Set<string> {
+  const set = new Set<string>();
+  for (const entry of excludingColumn) {
+    const normalized = normalizeColumnName(entry);
+    if (normalized !== '') set.add(normalized);
+  }
+  return set;
+}
 
-    // Email variations
-    email: TargetColumnType.Email,
-    emailaddress: TargetColumnType.Email,
-    'e-mail': TargetColumnType.Email,
-
-    // Mobile variations
-    mobile: TargetColumnType.Mobile,
-    mobilenumber: TargetColumnType.Mobile,
-
-    // Phone variations
-    phone: TargetColumnType.Phone,
-    phonenumber: TargetColumnType.Phone,
-  };
+/**
+ * Build a ColumnMapping for each header, with `isTarget = true` for every
+ * column NOT in the exclusion list. Matching is case- and whitespace-insensitive
+ * via `normalizeColumnName`.
+ *
+ * If `excludingColumn` is omitted, reads from `window.excludingColumn`.
+ */
+export function findColumnsToEncrypt(
+  headers: string[],
+  excludingColumn?: readonly string[]
+): ColumnMapping[] {
+  const excluded = buildExcludedSet(excludingColumn ?? readExcludingColumnFromWindow());
 
   return headers.map((header, index) => {
     const normalized = normalizeColumnName(header);
-    const targetType = targetPatterns[normalized];
-
     return {
       originalName: header,
       normalizedName: normalized,
-      isTarget: targetType !== undefined,
-      targetType,
+      isTarget: !excluded.has(normalized),
       columnIndex: index,
     };
   });
 }
 
 /**
- * Check if any target columns exist in headers
+ * True when at least one header is not excluded — i.e. there's something to hash.
  */
-export function hasTargetColumns(headers: string[]): boolean {
-  const mappings = findTargetColumns(headers);
-  return mappings.some((m) => m.isTarget);
+export function hasColumnsToEncrypt(
+  headers: string[],
+  excludingColumn?: readonly string[]
+): boolean {
+  return findColumnsToEncrypt(headers, excludingColumn).some((m) => m.isTarget);
+}
+
+/**
+ * Return the original-cased headers that matched the exclusion list,
+ * preserving the order they appear in `headers`.
+ */
+export function getExcludedHeaders(
+  headers: string[],
+  excludingColumn?: readonly string[]
+): string[] {
+  const excluded = buildExcludedSet(excludingColumn ?? readExcludingColumnFromWindow());
+  return headers.filter((h) => excluded.has(normalizeColumnName(h)));
 }

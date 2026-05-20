@@ -18,8 +18,13 @@ import {
   Upload,
 } from 'antd';
 import type { UploadProps } from 'antd';
-import { useState } from 'react';
-import { findTargetColumns, hasTargetColumns } from './services/columnMatcher';
+import { useMemo, useState } from 'react';
+import {
+  findColumnsToEncrypt,
+  getExcludedHeaders,
+  hasColumnsToEncrypt,
+  readExcludingColumnFromWindow,
+} from './services/columnMatcher';
 import { hashValue } from './services/encryptionService';
 import {
   downloadFile,
@@ -53,6 +58,17 @@ function App() {
   // Detect mobile viewport
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
+  // Read excludingColumn once at mount; safe for SSR via the helper guard.
+  const excludingColumn = useMemo(() => readExcludingColumnFromWindow(), []);
+  const excludedHeaders = useMemo(
+    () => (parsedData ? getExcludedHeaders(parsedData.headers, excludingColumn) : []),
+    [parsedData, excludingColumn]
+  );
+  const encryptedHeaders = useMemo(
+    () => (parsedData ? columnMappings.filter((m) => m.isTarget).map((m) => m.originalName) : []),
+    [parsedData, columnMappings]
+  );
+
   const handleFileUpload: UploadProps['customRequest'] = async ({ file: uploadFile }) => {
     const fileObj = uploadFile as File;
 
@@ -83,15 +99,14 @@ function App() {
 
       setParsedData(parsed);
 
-      // Find target columns
-      const mappings = findTargetColumns(parsed.headers);
+      // Determine which columns to encrypt (all except those in excludingColumn)
+      const mappings = findColumnsToEncrypt(parsed.headers, excludingColumn);
       setColumnMappings(mappings);
 
-      // Check if any target columns exist
-      if (!hasTargetColumns(parsed.headers)) {
+      if (!hasColumnsToEncrypt(parsed.headers, excludingColumn)) {
         setState('ERROR');
         setErrorMessage(
-          'No target columns found. File must contain First Name, Last Name, Mobile, Phone, or Email (or variations like FirstName, E-mail, Phone Number, etc.)'
+          'All columns in this file are in the exclusion list — there is nothing to encrypt.'
         );
         return;
       }
@@ -224,15 +239,13 @@ function App() {
 
         setParsedData(parsed);
 
-        // Find target columns
-        const mappings = findTargetColumns(parsed.headers);
+        const mappings = findColumnsToEncrypt(parsed.headers, excludingColumn);
         setColumnMappings(mappings);
 
-        // Check if any target columns exist
-        if (!hasTargetColumns(parsed.headers)) {
+        if (!hasColumnsToEncrypt(parsed.headers, excludingColumn)) {
           setState('ERROR');
           setErrorMessage(
-            'No target columns found. File must contain First Name, Last Name, Mobile, Phone, or Email (or variations like FirstName, E-mail, Phone Number, etc.)'
+            'All columns in this file are in the exclusion list — there is nothing to encrypt.'
           );
           return;
         }
@@ -273,11 +286,47 @@ function App() {
                 <div>
                   <Title level={4}>Encrypt Sensitive Data in Excel/CSV Files</Title>
                   <Paragraph>
-                    Upload an Excel (.xlsx, .xls) or CSV file to encrypt sensitive columns (First
-                    Name, Last Name, Email, Mobile, Phone) using SHA-256 hashing. All processing
-                    happens in your browser - no data is sent to any server.
+                    Upload an Excel (.xlsx, .xls) or CSV file. Every column will be encrypted with
+                    SHA-256 hashing, except for the columns listed in the exclusion list shown
+                    below. All processing happens in your browser — no data is sent to any server.
                   </Paragraph>
                 </div>
+
+                <Alert
+                  data-testid="exclusion-warning"
+                  message={
+                    excludingColumn.length > 0
+                      ? 'All columns will be encrypted, except the excluded ones'
+                      : 'Every column in your file will be encrypted'
+                  }
+                  description={
+                    excludingColumn.length > 0 ? (
+                      <>
+                        <p>
+                          <strong>Excluded from encryption:</strong> {excludingColumn.join(', ')}
+                        </p>
+                        <p>
+                          Make sure your file's headers match the exclusion list before uploading.
+                          Any column not in this list — including sensitive data you may not have
+                          intended to hash — will be irreversibly hashed.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p>
+                          No columns are excluded. Every column in your uploaded file will be hashed
+                          with SHA-256.
+                        </p>
+                        <p>
+                          To exclude columns, edit <code>window.excludingColumn</code> in this HTML
+                          file (e.g. <code>['name', 'address']</code>).
+                        </p>
+                      </>
+                    )
+                  }
+                  type="warning"
+                  showIcon
+                />
 
                 <Alert
                   message="Important Notes"
@@ -374,11 +423,13 @@ function App() {
                         <Descriptions.Item label="Rows">
                           {parsedData.rowCount.toLocaleString()}
                         </Descriptions.Item>
-                        <Descriptions.Item label="Columns to Encrypt">
-                          {columnMappings
-                            .filter((m) => m.isTarget)
-                            .map((m) => m.originalName)
-                            .join(', ')}
+                        <Descriptions.Item label="Excluded from encryption">
+                          {excludedHeaders.length > 0 ? excludedHeaders.join(', ') : 'None'}
+                        </Descriptions.Item>
+                        <Descriptions.Item
+                          label={`Columns to encrypt (${encryptedHeaders.length})`}
+                        >
+                          {encryptedHeaders.join(', ')}
                         </Descriptions.Item>
                       </Descriptions>
                     </Card>

@@ -3,13 +3,16 @@
  * Tests end-to-end flow with exact column name matching
  */
 
-import { describe, expect, it } from 'vitest';
-import { parseExcel } from '../../src/services/fileParser';
-import { findTargetColumns } from '../../src/services/columnMatcher';
-import { hashValue } from '../../src/services/encryptionService';
-import { generateExcel, generateDownloadFilename } from '../../src/services/fileGenerator';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { findColumnsToEncrypt } from '../../src/services/columnMatcher';
+import { hashValue } from '../../src/services/encryptionService';
+import { generateDownloadFilename, generateExcel } from '../../src/services/fileGenerator';
+import { parseExcel } from '../../src/services/fileParser';
+
+// Department is the only non-encrypted column in this fixture.
+const EXCLUDED = ['department'];
 
 describe('Integration Test - Scenario 1: Exact Column Names', () => {
   it('should process employees-exact.xlsx with exact column name matching', async () => {
@@ -17,10 +20,10 @@ describe('Integration Test - Scenario 1: Exact Column Names', () => {
     const testFilePath = path.join(process.cwd(), 'test-data', 'employees-exact.xlsx');
     const buffer = fs.readFileSync(testFilePath);
     const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
     const file = new File([blob], 'employees-exact.xlsx', {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
 
     // Step 1: Parse Excel file
@@ -37,18 +40,18 @@ describe('Integration Test - Scenario 1: Exact Column Names', () => {
     expect(parsedData.rows).toHaveLength(2);
     expect(parsedData.rowCount).toBe(2);
 
-    // Step 2: Detect target columns
-    const columnMappings = findTargetColumns(parsedData.headers);
-    const targetColumns = columnMappings.filter(m => m.isTarget);
+    // Step 2: Determine columns to encrypt (everything except Department).
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, EXCLUDED);
+    const targetColumns = columnMappings.filter((m) => m.isTarget);
 
-    // Should detect 4 target columns (First Name, Last Name, Email, Mobile)
+    // Should mark 4 columns (First Name, Last Name, Email, Mobile) for encryption.
     expect(targetColumns).toHaveLength(4);
 
     // Verify exact matching
-    expect(targetColumns.map(c => c.originalName)).toContain('First Name');
-    expect(targetColumns.map(c => c.originalName)).toContain('Last Name');
-    expect(targetColumns.map(c => c.originalName)).toContain('Email');
-    expect(targetColumns.map(c => c.originalName)).toContain('Mobile');
+    expect(targetColumns.map((c) => c.originalName)).toContain('First Name');
+    expect(targetColumns.map((c) => c.originalName)).toContain('Last Name');
+    expect(targetColumns.map((c) => c.originalName)).toContain('Email');
+    expect(targetColumns.map((c) => c.originalName)).toContain('Mobile');
 
     // Step 3: Encrypt target columns
     const encryptedRows = await Promise.all(

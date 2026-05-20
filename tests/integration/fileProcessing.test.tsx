@@ -4,10 +4,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseCSV, parseExcel } from '../../src/services/fileParser';
-import { findTargetColumns } from '../../src/services/columnMatcher';
+import { findColumnsToEncrypt } from '../../src/services/columnMatcher';
 import { hashValue } from '../../src/services/encryptionService';
-import { generateCSV, generateExcel, generateDownloadFilename } from '../../src/services/fileGenerator';
+import {
+  generateCSV,
+  generateDownloadFilename,
+  generateExcel,
+} from '../../src/services/fileGenerator';
+import { parseCSV, parseExcel } from '../../src/services/fileParser';
 
 describe('File Processing Integration - CSV Flow', () => {
   it('should process CSV file end-to-end: parse → detect → encrypt → generate', async () => {
@@ -26,8 +30,8 @@ Jane,Smith,jane@example.com,555-5678`;
     expect(parsedData.rowCount).toBe(2);
     expect(parsedData.columnCount).toBe(4);
 
-    // Step 3: Detect target columns
-    const columnMappings = findTargetColumns(parsedData.headers);
+    // Step 3: Determine columns to encrypt — empty exclusion list = encrypt all.
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, []);
     const targetColumns = columnMappings.filter((m) => m.isTarget);
     expect(targetColumns).toHaveLength(4); // All 4 columns are targets
 
@@ -75,7 +79,7 @@ Jane,,jane@example.com
     const file = new File([blob], 'incomplete.csv', { type: 'text/csv' });
 
     const parsedData = await parseCSV(file);
-    const columnMappings = findTargetColumns(parsedData.headers);
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, []);
 
     const encryptedRows = await Promise.all(
       parsedData.rows.map(async (row) => {
@@ -111,7 +115,7 @@ john,doe`;
     const file = new File([blob], 'normalize.csv', { type: 'text/csv' });
 
     const parsedData = await parseCSV(file);
-    const columnMappings = findTargetColumns(parsedData.headers);
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, []);
 
     const encryptedRows = await Promise.all(
       parsedData.rows.map(async (row) => {
@@ -144,7 +148,7 @@ John,john@example.com
     const file = new File([blob], 'whitespace.csv', { type: 'text/csv' });
 
     const parsedData = await parseCSV(file);
-    const columnMappings = findTargetColumns(parsedData.headers);
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, []);
 
     const encryptedRows = await Promise.all(
       parsedData.rows.map(async (row) => {
@@ -182,12 +186,11 @@ Bob,555-5678,bob@test.com`;
     const file = new File([blob], 'phone.csv', { type: 'text/csv' });
 
     const parsedData = await parseCSV(file);
-    const columnMappings = findTargetColumns(parsedData.headers);
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, []);
 
-    // Verify "Phone Number" is detected as a target column
+    // Verify "Phone Number" is included in the encrypt set.
     const phoneColumn = columnMappings.find((m) => m.originalName === 'Phone Number');
     expect(phoneColumn?.isTarget).toBe(true);
-    expect(phoneColumn?.targetType).toBe('PHONE');
 
     // Verify encryption works on Phone column
     const encryptedRows = await Promise.all(
@@ -211,7 +214,7 @@ Bob,555-5678,bob@test.com`;
 });
 
 describe('File Processing Integration - Error Scenarios', () => {
-  it('should handle file with no target columns', async () => {
+  it('should report zero columns when all headers are in the exclusion list', async () => {
     const csvContent = `ID,Product,Price
 101,Widget,19.99
 102,Gadget,29.99`;
@@ -220,13 +223,10 @@ describe('File Processing Integration - Error Scenarios', () => {
     const file = new File([blob], 'no-targets.csv', { type: 'text/csv' });
 
     const parsedData = await parseCSV(file);
-    const columnMappings = findTargetColumns(parsedData.headers);
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, ['id', 'product', 'price']);
 
     const targetColumns = columnMappings.filter((m) => m.isTarget);
-    expect(targetColumns).toHaveLength(0); // No target columns detected
-
-    // This should trigger an error in the UI
-    // For now, just verify detection works
+    expect(targetColumns).toHaveLength(0);
   });
 
   it('should generate correct filename with multiple dots', async () => {

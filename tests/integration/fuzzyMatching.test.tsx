@@ -3,12 +3,15 @@
  * Tests fuzzy column name matching (FirstName, Last_Name, Email Address, Mobile Number)
  */
 
-import { describe, expect, it } from 'vitest';
-import { parseCSV } from '../../src/services/fileParser';
-import { findTargetColumns } from '../../src/services/columnMatcher';
-import { hashValue } from '../../src/services/encryptionService';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { findColumnsToEncrypt } from '../../src/services/columnMatcher';
+import { hashValue } from '../../src/services/encryptionService';
+import { parseCSV } from '../../src/services/fileParser';
+
+// Headers in contacts-fuzzy.csv that are NOT meant to be encrypted in this test.
+const EXCLUDED = ['id', 'company'];
 
 describe('Integration Test - Scenario 2: Fuzzy Column Matching', () => {
   it('should match fuzzy column names: FirstName, Last_Name, Email Address, Mobile Number', async () => {
@@ -29,29 +32,17 @@ describe('Integration Test - Scenario 2: Fuzzy Column Matching', () => {
 
     expect(parsedData.rows).toHaveLength(3);
 
-    // Step 2: Fuzzy column detection
-    const columnMappings = findTargetColumns(parsedData.headers);
-    const targetColumns = columnMappings.filter(m => m.isTarget);
+    // Step 2: Column detection — excluding ID and Company, hash everything else.
+    const columnMappings = findColumnsToEncrypt(parsedData.headers, EXCLUDED);
+    const targetColumns = columnMappings.filter((m) => m.isTarget);
 
-    // Should detect all 4 target columns despite fuzzy names
+    // Should detect 4 columns to encrypt: FirstName, Last_Name, Email Address, Mobile Number
     expect(targetColumns).toHaveLength(4);
 
-    // Verify fuzzy matching worked
-    const firstNameCol = columnMappings.find(m => m.originalName === 'FirstName');
-    expect(firstNameCol?.isTarget).toBe(true);
-    expect(firstNameCol?.targetType).toBe('FIRST_NAME');
-
-    const lastNameCol = columnMappings.find(m => m.originalName === 'Last_Name');
-    expect(lastNameCol?.isTarget).toBe(true);
-    expect(lastNameCol?.targetType).toBe('LAST_NAME');
-
-    const emailCol = columnMappings.find(m => m.originalName === 'Email Address');
-    expect(emailCol?.isTarget).toBe(true);
-    expect(emailCol?.targetType).toBe('EMAIL');
-
-    const mobileCol = columnMappings.find(m => m.originalName === 'Mobile Number');
-    expect(mobileCol?.isTarget).toBe(true);
-    expect(mobileCol?.targetType).toBe('MOBILE');
+    expect(columnMappings.find((m) => m.originalName === 'FirstName')?.isTarget).toBe(true);
+    expect(columnMappings.find((m) => m.originalName === 'Last_Name')?.isTarget).toBe(true);
+    expect(columnMappings.find((m) => m.originalName === 'Email Address')?.isTarget).toBe(true);
+    expect(columnMappings.find((m) => m.originalName === 'Mobile Number')?.isTarget).toBe(true);
 
     // Step 3: Encrypt
     const encryptedRows = await Promise.all(

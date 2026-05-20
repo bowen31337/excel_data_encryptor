@@ -1,183 +1,170 @@
 /**
- * Contract tests for IColumnMatcher
- * These tests MUST fail until columnMatcher.ts is implemented
- * Based on contracts/encryption-service.contract.ts
+ * Unit tests for columnMatcher service (exclusion-list model).
  */
 
-import { describe, expect, it } from 'vitest';
-import { TargetColumnType } from '../../src/types/encryption.types';
-
-// Import service (will fail until implemented)
-import { findTargetColumns, normalizeColumnName } from '../../src/services/columnMatcher';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  findColumnsToEncrypt,
+  getExcludedHeaders,
+  hasColumnsToEncrypt,
+  normalizeColumnName,
+  readExcludingColumnFromWindow,
+} from '../../src/services/columnMatcher';
 
 describe('columnMatcher - normalizeColumnName', () => {
-  it('should remove spaces from column names', () => {
+  it('removes spaces, underscores, and dashes', () => {
     expect(normalizeColumnName('First Name')).toBe('firstname');
-    expect(normalizeColumnName('Last Name')).toBe('lastname');
-    expect(normalizeColumnName('Email Address')).toBe('emailaddress');
-  });
-
-  it('should remove underscores from column names', () => {
     expect(normalizeColumnName('First_Name')).toBe('firstname');
-    expect(normalizeColumnName('Last_Name')).toBe('lastname');
-    expect(normalizeColumnName('Mobile_Number')).toBe('mobilenumber');
-  });
-
-  it('should remove dashes from column names', () => {
     expect(normalizeColumnName('First-Name')).toBe('firstname');
-    expect(normalizeColumnName('E-mail')).toBe('email');
     expect(normalizeColumnName('FIRST-NAME')).toBe('firstname');
   });
 
-  it('should convert to lowercase', () => {
-    expect(normalizeColumnName('FIRSTNAME')).toBe('firstname');
-    expect(normalizeColumnName('LastName')).toBe('lastname');
+  it('lowercases the input', () => {
     expect(normalizeColumnName('EMAIL')).toBe('email');
+    expect(normalizeColumnName('LastName')).toBe('lastname');
   });
 
-  it('should handle mixed separators', () => {
+  it('handles mixed separators and surrounding whitespace', () => {
     expect(normalizeColumnName('First_Name-Test ')).toBe('firstnametest');
     expect(normalizeColumnName(' Email - Address_2 ')).toBe('emailaddress2');
   });
 
-  it('should be deterministic', () => {
+  it('is deterministic', () => {
     const input = 'Test_Column-Name ';
     expect(normalizeColumnName(input)).toBe(normalizeColumnName(input));
   });
 });
 
-describe('columnMatcher - findTargetColumns', () => {
-  it('should recognize exact "First Name" match', () => {
-    const headers = ['ID', 'First Name', 'Department'];
-    const mappings = findTargetColumns(headers);
-
-    expect(mappings).toHaveLength(3);
-    expect(mappings[1].isTarget).toBe(true);
-    expect(mappings[1].targetType).toBe(TargetColumnType.FirstName);
-    expect(mappings[1].originalName).toBe('First Name');
-    expect(mappings[1].normalizedName).toBe('firstname');
-  });
-
-  it('should recognize "FirstName" variation', () => {
-    const headers = ['FirstName'];
-    const mappings = findTargetColumns(headers);
-
-    expect(mappings[0].isTarget).toBe(true);
-    expect(mappings[0].targetType).toBe(TargetColumnType.FirstName);
-  });
-
-  it('should recognize "first_name" variation', () => {
-    const headers = ['first_name'];
-    const mappings = findTargetColumns(headers);
-
-    expect(mappings[0].isTarget).toBe(true);
-    expect(mappings[0].targetType).toBe(TargetColumnType.FirstName);
-  });
-
-  it('should recognize "Last Name" variations', () => {
-    const testCases = ['Last Name', 'LastName', 'last_name', 'LAST-NAME', 'lastName'];
-
-    testCases.forEach((header) => {
-      const mappings = findTargetColumns([header]);
-      expect(mappings[0].isTarget).toBe(true);
-      expect(mappings[0].targetType).toBe(TargetColumnType.LastName);
-    });
-  });
-
-  it('should recognize "Email" variations including "Email Address"', () => {
-    const testCases = ['Email', 'E-mail', 'Email Address', 'email_address', 'EMAIL'];
-
-    testCases.forEach((header) => {
-      const mappings = findTargetColumns([header]);
-      expect(mappings[0].isTarget).toBe(true);
-      expect(mappings[0].targetType).toBe(TargetColumnType.Email);
-    });
-  });
-
-  it('should recognize "Mobile" variations', () => {
-    const testCases = ['Mobile', 'Mobile Number', 'mobile_number', 'MOBILE', 'mobilenumber'];
-
-    testCases.forEach((header) => {
-      const mappings = findTargetColumns([header]);
-      expect(mappings[0].isTarget).toBe(true);
-      expect(mappings[0].targetType).toBe(TargetColumnType.Mobile);
-    });
-  });
-
-  it('should mark non-target columns correctly', () => {
-    const headers = ['ID', 'First Name', 'Department', 'Email'];
-    const mappings = findTargetColumns(headers);
-
-    expect(mappings[0].isTarget).toBe(false); // ID
-    expect(mappings[1].isTarget).toBe(true); // First Name
-    expect(mappings[2].isTarget).toBe(false); // Department
-    expect(mappings[3].isTarget).toBe(true); // Email
-  });
-
-  it('should set correct column indices', () => {
-    const headers = ['ID', 'First Name', 'Last Name', 'Email'];
-    const mappings = findTargetColumns(headers);
-
-    expect(mappings[0].columnIndex).toBe(0);
-    expect(mappings[1].columnIndex).toBe(1);
-    expect(mappings[2].columnIndex).toBe(2);
-    expect(mappings[3].columnIndex).toBe(3);
-  });
-
-  it('should handle empty headers array', () => {
-    const mappings = findTargetColumns([]);
-    expect(mappings).toHaveLength(0);
-  });
-
-  it('should handle headers with no target columns', () => {
-    const headers = ['ID', 'Product', 'Price', 'Quantity'];
-    const mappings = findTargetColumns(headers);
-
+describe('columnMatcher - findColumnsToEncrypt', () => {
+  it('marks every column as a target when the exclusion list is empty', () => {
+    const headers = ['ID', 'Name', 'Email', 'Department'];
+    const mappings = findColumnsToEncrypt(headers, []);
     expect(mappings).toHaveLength(4);
-    expect(mappings.every((m) => !m.isTarget)).toBe(true);
-  });
-
-  it('should handle headers with extra whitespace', () => {
-    const headers = [' First Name ', '  Email  ', 'Mobile  '];
-    const mappings = findTargetColumns(headers);
-
-    expect(mappings[0].isTarget).toBe(true);
-    expect(mappings[1].isTarget).toBe(true);
-    expect(mappings[2].isTarget).toBe(true);
-  });
-
-  it('should be case-insensitive', () => {
-    const headers = ['FIRSTNAME', 'lastname', 'EmAiL', 'MOBILE'];
-    const mappings = findTargetColumns(headers);
-
     expect(mappings.every((m) => m.isTarget)).toBe(true);
   });
 
-  it('should recognize "Phone" variations', () => {
-    const testCases = [
-      'Phone',
-      'phone',
-      'PHONE',
-      'Phone Number',
-      'phone_number',
-      'PhoneNumber',
-      'phonenumber',
-    ];
+  it('excludes columns whose normalized name appears in the exclusion list', () => {
+    const headers = ['ID', 'Name', 'Email', 'Address'];
+    const mappings = findColumnsToEncrypt(headers, ['name', 'address']);
 
-    testCases.forEach((header) => {
-      const mappings = findTargetColumns([header]);
-      expect(mappings[0].isTarget).toBe(true);
-      expect(mappings[0].targetType).toBe(TargetColumnType.Phone);
+    expect(mappings[0].isTarget).toBe(true); // ID
+    expect(mappings[1].isTarget).toBe(false); // Name
+    expect(mappings[2].isTarget).toBe(true); // Email
+    expect(mappings[3].isTarget).toBe(false); // Address
+  });
+
+  it('matches case- and whitespace-insensitively', () => {
+    const headers = ['Name', 'NAME', '  name  ', 'name_'];
+    const mappings = findColumnsToEncrypt(headers, ['name']);
+    expect(mappings.every((m) => m.isTarget === false)).toBe(true);
+  });
+
+  it('does NOT match substrings or compound names', () => {
+    const headers = ['Name', 'FirstName', 'Surname', 'first_name'];
+    const mappings = findColumnsToEncrypt(headers, ['name']);
+
+    expect(mappings[0].isTarget).toBe(false); // Name — excluded
+    expect(mappings[1].isTarget).toBe(true); // FirstName — normalizes to "firstname", not "name"
+    expect(mappings[2].isTarget).toBe(true); // Surname
+    expect(mappings[3].isTarget).toBe(true); // first_name → "firstname"
+  });
+
+  it('preserves the original header name and column index', () => {
+    const headers = ['ID', 'First Name', 'Last Name', 'Email'];
+    const mappings = findColumnsToEncrypt(headers, ['id']);
+
+    expect(mappings[0]).toMatchObject({
+      originalName: 'ID',
+      normalizedName: 'id',
+      isTarget: false,
+      columnIndex: 0,
+    });
+    expect(mappings[3]).toMatchObject({
+      originalName: 'Email',
+      normalizedName: 'email',
+      isTarget: true,
+      columnIndex: 3,
     });
   });
 
-  it('should distinguish between Phone and Mobile columns', () => {
-    const headers = ['Mobile', 'Phone'];
-    const mappings = findTargetColumns(headers);
+  it('handles an empty headers array', () => {
+    expect(findColumnsToEncrypt([], ['anything'])).toEqual([]);
+  });
 
+  it('deduplicates exclusion entries via normalization', () => {
+    const headers = ['Name'];
+    const mappings = findColumnsToEncrypt(headers, ['name', 'NAME', ' name_ ']);
+    expect(mappings[0].isTarget).toBe(false);
+  });
+
+  it('ignores empty / whitespace-only exclusion entries', () => {
+    const headers = ['', 'Email'];
+    const mappings = findColumnsToEncrypt(headers, ['', '   ']);
+    // Empty exclusion entries normalize to '' and are dropped, so nothing is excluded.
+    expect(mappings.every((m) => m.isTarget)).toBe(true);
+  });
+});
+
+describe('columnMatcher - hasColumnsToEncrypt', () => {
+  it('returns true when at least one header is not excluded', () => {
+    expect(hasColumnsToEncrypt(['ID', 'Name'], ['name'])).toBe(true);
+  });
+
+  it('returns false when every header is excluded', () => {
+    expect(hasColumnsToEncrypt(['Name', 'Address'], ['name', 'address'])).toBe(false);
+  });
+
+  it('returns false for an empty headers array', () => {
+    expect(hasColumnsToEncrypt([], [])).toBe(false);
+  });
+});
+
+describe('columnMatcher - getExcludedHeaders', () => {
+  it('returns original-cased headers that matched the exclusion list', () => {
+    const headers = ['ID', 'Full Name', 'Email', 'ADDRESS'];
+    expect(getExcludedHeaders(headers, ['fullname', 'address'])).toEqual(['Full Name', 'ADDRESS']);
+  });
+
+  it('returns an empty array when nothing matches', () => {
+    expect(getExcludedHeaders(['ID', 'Email'], ['phone'])).toEqual([]);
+  });
+});
+
+describe('columnMatcher - window.excludingColumn fallback', () => {
+  const originalExcludingColumn = window.excludingColumn;
+
+  beforeEach(() => {
+    // Reset before each test
+    (window as { excludingColumn?: unknown }).excludingColumn = undefined;
+  });
+
+  afterEach(() => {
+    (window as { excludingColumn?: unknown }).excludingColumn = originalExcludingColumn;
+    vi.restoreAllMocks();
+  });
+
+  it('reads the array from window when no argument is passed', () => {
+    window.excludingColumn = ['email'];
+    const mappings = findColumnsToEncrypt(['ID', 'Email']);
     expect(mappings[0].isTarget).toBe(true);
-    expect(mappings[0].targetType).toBe(TargetColumnType.Mobile);
-    expect(mappings[1].isTarget).toBe(true);
-    expect(mappings[1].targetType).toBe(TargetColumnType.Phone);
+    expect(mappings[1].isTarget).toBe(false);
+  });
+
+  it('falls back to [] (encrypt everything) when window.excludingColumn is undefined', () => {
+    expect(readExcludingColumnFromWindow()).toEqual([]);
+    const mappings = findColumnsToEncrypt(['ID', 'Email']);
+    expect(mappings.every((m) => m.isTarget)).toBe(true);
+  });
+
+  it('falls back to [] and warns when window.excludingColumn is not an array', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    window.excludingColumn = 'not an array' as unknown;
+    expect(readExcludingColumnFromWindow()).toEqual([]);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops non-string entries from window.excludingColumn', () => {
+    window.excludingColumn = ['email', 123, null, 'phone'] as unknown;
+    expect(readExcludingColumnFromWindow()).toEqual(['email', 'phone']);
   });
 });
