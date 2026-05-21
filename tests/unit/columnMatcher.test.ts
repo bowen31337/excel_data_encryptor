@@ -12,21 +12,22 @@ import {
 } from '../../src/services/columnMatcher';
 
 describe('columnMatcher - normalizeColumnName', () => {
-  it('removes spaces, underscores, and dashes', () => {
-    expect(normalizeColumnName('First Name')).toBe('firstname');
-    expect(normalizeColumnName('First_Name')).toBe('firstname');
-    expect(normalizeColumnName('First-Name')).toBe('firstname');
-    expect(normalizeColumnName('FIRST-NAME')).toBe('firstname');
-  });
-
   it('lowercases the input', () => {
     expect(normalizeColumnName('EMAIL')).toBe('email');
     expect(normalizeColumnName('LastName')).toBe('lastname');
+    expect(normalizeColumnName('Address')).toBe('address');
   });
 
-  it('handles mixed separators and surrounding whitespace', () => {
-    expect(normalizeColumnName('First_Name-Test ')).toBe('firstnametest');
-    expect(normalizeColumnName(' Email - Address_2 ')).toBe('emailaddress2');
+  it('trims outer whitespace', () => {
+    expect(normalizeColumnName('  Name  ')).toBe('name');
+    expect(normalizeColumnName('\tEmail\n')).toBe('email');
+  });
+
+  it('preserves internal whitespace, underscores, and dashes', () => {
+    expect(normalizeColumnName('First Name')).toBe('first name');
+    expect(normalizeColumnName('First_Name')).toBe('first_name');
+    expect(normalizeColumnName('First-Name')).toBe('first-name');
+    expect(normalizeColumnName(' Email - Address ')).toBe('email - address');
   });
 
   it('is deterministic', () => {
@@ -53,20 +54,22 @@ describe('columnMatcher - findColumnsToEncrypt', () => {
     expect(mappings[3].isTarget).toBe(false); // Address
   });
 
-  it('matches case- and whitespace-insensitively', () => {
-    const headers = ['Name', 'NAME', '  name  ', 'name_'];
+  it('matches case-insensitively and trims outer whitespace', () => {
+    const headers = ['Name', 'NAME', '  name  ', '\tname\n'];
     const mappings = findColumnsToEncrypt(headers, ['name']);
     expect(mappings.every((m) => m.isTarget === false)).toBe(true);
   });
 
-  it('does NOT match substrings or compound names', () => {
-    const headers = ['Name', 'FirstName', 'Surname', 'first_name'];
+  it('does NOT match substrings, compound names, or names with internal separators', () => {
+    const headers = ['Name', 'FirstName', 'Surname', 'first_name', 'name_', 'first-name'];
     const mappings = findColumnsToEncrypt(headers, ['name']);
 
-    expect(mappings[0].isTarget).toBe(false); // Name — excluded
-    expect(mappings[1].isTarget).toBe(true); // FirstName — normalizes to "firstname", not "name"
-    expect(mappings[2].isTarget).toBe(true); // Surname
-    expect(mappings[3].isTarget).toBe(true); // first_name → "firstname"
+    expect(mappings[0].isTarget).toBe(false); // 'Name' → 'name' — excluded
+    expect(mappings[1].isTarget).toBe(true); // 'FirstName' → 'firstname' ≠ 'name'
+    expect(mappings[2].isTarget).toBe(true); // 'Surname' ≠ 'name'
+    expect(mappings[3].isTarget).toBe(true); // 'first_name' ≠ 'name' (separators preserved)
+    expect(mappings[4].isTarget).toBe(true); // 'name_' ≠ 'name'
+    expect(mappings[5].isTarget).toBe(true); // 'first-name' ≠ 'name'
   });
 
   it('preserves the original header name and column index', () => {
@@ -91,9 +94,9 @@ describe('columnMatcher - findColumnsToEncrypt', () => {
     expect(findColumnsToEncrypt([], ['anything'])).toEqual([]);
   });
 
-  it('deduplicates exclusion entries via normalization', () => {
+  it('deduplicates exclusion entries via case-insensitive matching', () => {
     const headers = ['Name'];
-    const mappings = findColumnsToEncrypt(headers, ['name', 'NAME', ' name_ ']);
+    const mappings = findColumnsToEncrypt(headers, ['name', 'NAME', '  Name  ']);
     expect(mappings[0].isTarget).toBe(false);
   });
 
@@ -122,7 +125,7 @@ describe('columnMatcher - hasColumnsToEncrypt', () => {
 describe('columnMatcher - getExcludedHeaders', () => {
   it('returns original-cased headers that matched the exclusion list', () => {
     const headers = ['ID', 'Full Name', 'Email', 'ADDRESS'];
-    expect(getExcludedHeaders(headers, ['fullname', 'address'])).toEqual(['Full Name', 'ADDRESS']);
+    expect(getExcludedHeaders(headers, ['full name', 'address'])).toEqual(['Full Name', 'ADDRESS']);
   });
 
   it('returns an empty array when nothing matches', () => {

@@ -33,34 +33,40 @@ A single `<script>` block in `index.html`, placed in `<head>` before the Vite/Re
 <head>
   <script>
     /* Edit this list to control which columns are NOT encrypted.
-       Matching is case- and whitespace-insensitive
-       (e.g. "name" matches "Name", "NAME ", "name_").
-       Leave empty (`[]`) or remove the line to encrypt EVERY column. */
+       Matching is case-insensitive and trims outer whitespace, but is
+       otherwise EXACT — e.g. "name" matches "Name", "NAME", " name "
+       but NOT "first_name", "name_", or "username".
+       Leave empty (`[]`) or remove this script to encrypt EVERY column. */
     window.excludingColumn = ['name', 'address'];
   </script>
   ...
 </head>
 ```
 
+**Corrected 2026-05-21:** matching was initially specified as fuzzy (strip spaces / underscores / dashes); revised to case-insensitive *exact* match to avoid surprising users with broad matches like `"name"` excluding `"first_name"`.
+
 `vite-plugin-singlefile` inlines bundled assets but preserves the `index.html` shell, so this script appears verbatim near the top of the build output. To reconfigure, the user opens the built HTML in a text editor, edits the array literal, saves. No rebuild.
 
 ## Matching rules
 
-Reuse the existing `normalizeColumnName()` from `src/services/columnMatcher.ts`:
+`normalizeColumnName()` in `src/services/columnMatcher.ts`:
 
 - Lowercase the string.
-- Strip whitespace, underscores, and dashes.
+- Trim outer whitespace.
+- Preserve internal characters (spaces, underscores, dashes, etc.) verbatim.
 
-A header is excluded from encryption if its normalized form exactly equals the normalized form of any entry in `window.excludingColumn`.
+A header is excluded from encryption if its normalized form is byte-for-byte equal to the normalized form of any entry in `window.excludingColumn`.
 
 | `excludingColumn` entry | Header in file | Excluded? |
 |---|---|---|
 | `name` | `Name` | yes |
-| `name` | `NAME ` | yes |
-| `name` | `first_name` | no (normalizes to `firstname`) |
-| `address` | `Address Line` | no (normalizes to `addressline`) |
-| `addressline` | `Address Line` | yes |
-| `email` | `E-Mail` | yes (normalizes to `email`) |
+| `name` | `NAME ` | yes (outer whitespace trimmed) |
+| `name` | `first_name` | **no** (different string after lowercasing) |
+| `name` | `name_` | **no** (internal underscore preserved) |
+| `name` | `first name` | **no** (internal space preserved) |
+| `first name` | `First Name` | yes |
+| `email` | `E-Mail` | **no** (dash preserved → `e-mail` ≠ `email`) |
+| `e-mail` | `E-Mail` | yes |
 
 ## Architecture changes
 

@@ -11,9 +11,10 @@
     <title>Excel Data Encryptor</title>
     <script>
       /* Edit this list to control which columns are NOT encrypted.
-         Matching is case- and whitespace-insensitive (e.g. "name" matches
-         "Name", "NAME ", "name_"). Leave empty (`[]`) or remove this script
-         to encrypt EVERY column in the uploaded file. */
+         Matching is case-insensitive and trims outer whitespace, but is
+         otherwise EXACT — e.g. "name" matches "Name", "NAME", " name "
+         but NOT "first_name", "name_", or "username".
+         Leave empty (`[]`) or remove this script to encrypt EVERY column. */
       window.excludingColumn = ['name', 'address'];
     </script>
     <style>

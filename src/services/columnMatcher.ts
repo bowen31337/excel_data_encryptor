@@ -17,18 +17,17 @@ declare global {
 }
 
 /**
- * Normalize a column name for fuzzy matching.
- * Lowercases and strips whitespace, underscores, and dashes.
+ * Normalize a column name for case-insensitive exact matching.
+ * Lowercases and trims outer whitespace, but preserves internal characters
+ * (spaces, underscores, dashes, etc.) so "name" does NOT match "first_name".
  *
  * @example
- *   normalizeColumnName("First Name")  // "firstname"
- *   normalizeColumnName("E-Mail ")     // "email"
+ *   normalizeColumnName("Name")        // "name"
+ *   normalizeColumnName(" ADDRESS ")   // "address"
+ *   normalizeColumnName("First_Name")  // "first_name"  (NOT "firstname")
  */
 export function normalizeColumnName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[\s_-]+/g, '')
-    .trim();
+  return name.trim().toLowerCase();
 }
 
 /**
